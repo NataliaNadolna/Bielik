@@ -1,0 +1,8 @@
+{
+ "test": "./input.xlsx",
+ "results": "./results/default.json",
+ "llm-name": "gemini-1.5-flash",
+ "llm": "gemini",
+ "api": "vllm",
+ "interval": 2
+}

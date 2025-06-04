@@ -1,0 +1,5 @@
+Lp,Pytanie,Odpowiedź prawidłowa,,Odpowiedzi testowe,,,,Meta,,
+,,Odpowiedź,pozycja,A,B,C,D,Domena,Kategoria,Tagi
+,json.question,,json.answer,json.test.a,json.test.b,json.test.c,json.test.d,json.meta.domain,json.meta.category,json.meta.tags[]
+1,Jaki język tradycyjnie używany był przez Łemków?,Język rusiński (łemkowski),B,Język polski,Język rusiński (łemkowski),Język słowacki,Język czeski,Etnologia,Historia,
+,,,,,,,,Etnologia,,

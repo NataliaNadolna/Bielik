@@ -1,39 +1,7 @@
 {
-  "id modelu": "gemini-1.5-flash",
+  "id modelu": "gemini",
   "liczba_pytań": 2,
   "podsumowanie": {
     "prawidłowe odpowiedzi": 2
-  },
-  "odpowiedzi": [
-    {
-      "Lp": 1,
-      "Pytanie": "Jaki język tradycyjnie używany był przez Łemków?",
-      "Odpowiedź": "Język rusiński (łemkowski)",
-      "Pozycja": "B",
-      "A": "Język polski",
-      "B": "Język rusiński (łemkowski)",
-      "C": "Język słowacki",
-      "D": "Język czeski",
-      "Domena": "Etnologia",
-      "Kategoria": "Historia",
-      "Tagi": NaN,
-      "Odpowiedź modelu": "B",
-      "Poprawność": 1
-    },
-    {
-      "Lp": 2,
-      "Pytanie": "Jaki język tradycyjnie używany był przez Łemków?",
-      "Odpowiedź": "Język rusiński (łemkowski)",
-      "Pozycja": "A",
-      "A": "Język rusiński (łemkowski)",
-      "B": "Język polski",
-      "C": "Język słowacki",
-      "D": "Język czeski",
-      "Domena": "Etnologia",
-      "Kategoria": "Historia",
-      "Tagi": NaN,
-      "Odpowiedź modelu": "A",
-      "Poprawność": 1
-    }
-  ]
+  }
 }
