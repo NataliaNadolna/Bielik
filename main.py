@@ -1,9 +1,8 @@
-import google.generativeai as genai
 import pandas as pd
 import argparse
+import torch
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from openai import OpenAI
-from dotenv import load_dotenv
-from models import GeminiModel, OpenAIModel
 import os
 import json
 import time
@@ -64,53 +63,63 @@ def load_dataset(dataset_path):
     print(df.head())
     return df
 
-def get_model(api_type, llm_name, key, url=None):
-    if api_type == 'vllm':
-        return GeminiModel(llm_name, key)
-    elif api_type == 'openAI':
-        return OpenAIModel(llm_name, key, url)
-    else:
-        raise ValueError(f"Unsupported API type: {api_type}")
+# def get_model(api_type, llm_name, key, url=None):
+#     if api_type == 'vllm':
+#         return GeminiModel(llm_name, key)
+#     elif api_type == 'openAI':
+#         return OpenAIModel(llm_name, key, url)
+#     else:
+#         raise ValueError(f"Unsupported API type: {api_type}")
 
-def generate_answers(df, model, interval=0):
+def load_model_and_tokenizer(model_name):
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+
+    return model, tokenizer
+
+
+def get_answer(df, model, tokenizer):
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
+    
     responses = []
     correctness = []
     for index, row in df.iterrows():
         print(f"Odpowiadam na pytanie {index+1}")
-        prompt = f"""Korzystając z wiedzy, którą masz, odpowiedz na pytanie: {row['Pytanie']}.
+        prompt = f"""Odpowiedz na pytanie: {row['Pytanie']}.
 Do wyboru masz 4 odpowiedzi:
 A: {row['A']},
 B: {row['B']},
 C: {row['C']},
 D: {row['D']}.
-W odpowiedzi podaj tylko literę A, B, C lub D odpowiedzi, którą uważasz za poprawną.
+Podaj tylko literę A, B, C lub D oznaczającą odpowiedź, którą uważasz za poprawną.
 """
 
-        answer = model.generate_answer(prompt)
+        response = pipe(prompt, max_new_tokens=1)
+        answer = response[0]['generated_text']
+        clean_answer = answer[-1]
 
-        responses.append(answer)
+        print(f"Odpowiedź to: {clean_answer}")
 
-        if answer == row['Pozycja']:
+        responses.append(clean_answer)
+        if clean_answer == row['Pozycja']:
             correctness.append(1)
         else:
             correctness.append(0)
 
-        if interval > 0 and (index + 1) % interval == 0:
-            print(f"Waiting {interval} seconds to respect rate limits...")
-            time.sleep(interval)
-
-    df['Odpowiedź modelu'] = responses
-    df['Poprawność'] = correctness
+    df['Odpowiedz modelu'] = responses
+    df['Poprawnosc'] = correctness
     return df
 
+
 def save(df, llm_id):
-    correct_answers = int(df['Poprawność'].sum())
+    correct_answers = int(df['Poprawnosc'].sum())
 
     output_json = {
         "id modelu": llm_id,
-        "liczba_pytań": df.shape[0],
+        "liczba_pytan": df.shape[0],
         "podsumowanie": {
-            "prawidłowe odpowiedzi": correct_answers
+            "prawidlowe odpowiedzi": correct_answers
         }
     }
 
@@ -124,8 +133,9 @@ def save(df, llm_id):
 
     print("Zapisano")
 
+
 def main():
-    load_dotenv()
+    #load_dotenv()
 
     config_defaults = load_config()
     args = parse_arguments(config_defaults)
@@ -134,13 +144,12 @@ def main():
     for arg, value in vars(args).items():
         print(f"{arg}: {value}")
 
-    print("\nBenchmarking...")
-
-    model = get_model(args.api, args.llm_name, args.key, args.url)
     df = load_dataset(args.test)
-    df = generate_answers(df, model, interval=args.interval)
+    model_id = args.llm_name
+    model, tokenizer = load_model_and_tokenizer(model_id)
+    df_with_answers = get_answer(df, model, tokenizer)
 
-    save(df, args.llm)
+    save(df_with_answers, args.llm)
 
     print("Zrobione")
 

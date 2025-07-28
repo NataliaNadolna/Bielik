@@ -1,8 +1,7 @@
 {
  "test": "./input.xlsx",
  "results": "./results/default.json",
- "llm-name": "gemini-1.5-flash",
- "llm": "gemini",
- "api": "vllm",
- "interval": 15
+ "llm-name": "Qwen/Qwen1.5-0.5B",
+ "llm": "Qwen",
+ "api": "vllm"
 }
