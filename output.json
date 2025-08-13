@@ -1,7 +1,7 @@
 {
-  "id modelu": "Qwen",
+  "id modelu": "gemini",
   "liczba_pytan": 2,
   "podsumowanie": {
-    "prawidlowe odpowiedzi": 1
+    "prawidlowe odpowiedzi": 2
   }
 }

@@ -1,8 +1,11 @@
 import pandas as pd
 import argparse
 import torch
+from dotenv import load_dotenv
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from openai import OpenAI
+from models import GeminiModel, OpenAIModel
+from google.api_core.exceptions import ResourceExhausted
 import os
 import json
 import time
@@ -30,7 +33,7 @@ def parse_arguments(config_defaults):
     parser.add_argument('--llm-name', type=str, default=config_defaults.get('llm-name'),
                         help='Product name of the LLM')
 
-    parser.add_argument('--api', choices=['vllm', 'openAI'], default=config_defaults.get('api', 'vllm'),
+    parser.add_argument('--api', choices=['vllm', 'openAI', 'gemini'], default=config_defaults.get('api', 'vllm'),
                         help='API type to use')
 
     parser.add_argument('--url', type=str, default=config_defaults.get('url'),
@@ -63,13 +66,13 @@ def load_dataset(dataset_path):
     print(df.head())
     return df
 
-# def get_model(api_type, llm_name, key, url=None):
-#     if api_type == 'vllm':
-#         return GeminiModel(llm_name, key)
-#     elif api_type == 'openAI':
-#         return OpenAIModel(llm_name, key, url)
-#     else:
-#         raise ValueError(f"Unsupported API type: {api_type}")
+def get_model(api_type, llm_name, key, url=None):
+    if api_type == 'gemini':
+        return GeminiModel(llm_name, key)
+    elif api_type == 'openAI':
+        return OpenAIModel(llm_name, key, url)
+    else:
+        raise ValueError(f"Unsupported API type: {api_type}")
 
 def load_model_and_tokenizer(model_name):
 
@@ -79,7 +82,7 @@ def load_model_and_tokenizer(model_name):
     return model, tokenizer
 
 
-def get_answer(df, model, tokenizer):
+def get_answer_local(df, model, tokenizer):
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
     
     responses = []
@@ -103,6 +106,41 @@ Podaj tylko literę A, B, C lub D oznaczającą odpowiedź, którą uważasz za 
 
         responses.append(clean_answer)
         if clean_answer == row['Pozycja']:
+            correctness.append(1)
+        else:
+            correctness.append(0)
+
+    df['Odpowiedz modelu'] = responses
+    df['Poprawnosc'] = correctness
+    return df
+
+def get_answer_api(df, model, interval=0):
+    
+    responses = []
+    correctness = []
+    for index, row in df.iterrows():
+        print(f"Odpowiadam na pytanie {index+1}")
+        prompt = f"""Odpowiedz na pytanie: {row['Pytanie']}.
+Do wyboru masz 4 odpowiedzi:
+A: {row['A']},
+B: {row['B']},
+C: {row['C']},
+D: {row['D']}.
+Podaj tylko literę A, B, C lub D oznaczającą odpowiedź, którą uważasz za poprawną.
+"""
+        
+        try:
+            answer = model.generate_answer(prompt)
+        except ResourceExhausted as e:
+            print("Limit API osiągnięty, czekam 30 sekund...")
+            time.sleep(interval)
+            answer = model.generate_answer(prompt)
+
+        responses.append(answer)
+
+        print(f"Odpowiedź to: {answer}")
+
+        if answer == row['Pozycja']:
             correctness.append(1)
         else:
             correctness.append(0)
@@ -145,9 +183,26 @@ def main():
         print(f"{arg}: {value}")
 
     df = load_dataset(args.test)
+
     model_id = args.llm_name
-    model, tokenizer = load_model_and_tokenizer(model_id)
-    df_with_answers = get_answer(df, model, tokenizer)
+
+    if args.api == 'vllm':
+        model, tokenizer = load_model_and_tokenizer(model_id)
+        df_with_answers = get_answer_local(df, model, tokenizer)
+
+    elif args.api == 'gemini':
+        # Model Gemini przez API
+        model = GeminiModel(model_id, args.key)
+        df_with_answers = get_answer_api(df, model, args.interval)
+
+    elif args.api == 'openAI':
+        # Model OpenAI lub kompatybilny endpoint
+        model = OpenAIModel(model_id, args.key, args.url)
+        df_with_answers = get_answer_api(df, model, args.interval)
+
+    else:
+        raise ValueError(f"Nieobsługiwany typ API: {args.api}")
+
 
     save(df_with_answers, args.llm)
 

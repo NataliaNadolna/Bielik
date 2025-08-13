@@ -1,0 +1,27 @@
+{
+ "test": "./input.xlsx",
+ "results": "./results/default.json",
+ "llm-name": "Qwen/Qwen1.5-0.5B",
+ "llm": "Qwen",
+ "api": "vllm"
+}
+
+{
+ "test": "./input.xlsx",
+ "results": "./results/default.json",
+ "llm-name": "gemini-1.5-flash",
+ "llm": "gemini",
+ "api": "gemini",
+ "interval": 30
+}
+
+{
+  "test": "./input.xlsx",
+  "results": "./results/default.json",
+  "llm-name": "gpt-4o-mini",
+  "llm": "openai-test",
+  "api": "openAI",
+  "url": "https://api.openai.com/v1",
+  "key": "",
+  "interval": 30
+}
