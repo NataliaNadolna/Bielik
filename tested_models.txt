@@ -1,8 +1,8 @@
 {
- "test": "./input.xlsx",
+ "test": "./input-revi.xlsx",
  "results": "./results/default.json",
  "llm-name": "Qwen/Qwen1.5-0.5B",
- "llm": "Qwen",
+ "llm": "Qwen15-05B",
  "api": "vllm"
 }
 
@@ -24,4 +24,12 @@
   "url": "https://api.openai.com/v1",
   "key": "",
   "interval": 30
+}
+
+{
+  "test": "./input-revi.xlsx",
+  "results": "./results/default.json",
+  "llm-name": "speakleash/Bielik-7B-Instruct-v0.1",
+  "llm": "Bielik-7B",
+  "api": "vllm"
 }

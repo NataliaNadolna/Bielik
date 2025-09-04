@@ -1,7 +1,7 @@
 {
-  "id modelu": "gemini",
-  "liczba_pytan": 2,
+  "id modelu": "Qwen15-05B",
+  "liczba_pytan": 10,
   "podsumowanie": {
-    "prawidlowe odpowiedzi": 2
+    "prawidlowe odpowiedzi": 3
   }
 }

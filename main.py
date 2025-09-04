@@ -66,14 +66,6 @@ def load_dataset(dataset_path):
     print(df.head())
     return df
 
-def get_model(api_type, llm_name, key, url=None):
-    if api_type == 'gemini':
-        return GeminiModel(llm_name, key)
-    elif api_type == 'openAI':
-        return OpenAIModel(llm_name, key, url)
-    else:
-        raise ValueError(f"Unsupported API type: {api_type}")
-
 def load_model_and_tokenizer(model_name):
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -81,37 +73,57 @@ def load_model_and_tokenizer(model_name):
 
     return model, tokenizer
 
-
 def get_answer_local(df, model, tokenizer):
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
-    
-    responses = []
-    correctness = []
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        device=0 if torch.cuda.is_available() else -1
+    )
+
+    responses, correctness = [], []
+
     for index, row in df.iterrows():
         print(f"Odpowiadam na pytanie {index+1}")
-        prompt = f"""Odpowiedz na pytanie: {row['Pytanie']}.
-Do wyboru masz 4 odpowiedzi:
-A: {row['A']},
-B: {row['B']},
-C: {row['C']},
-D: {row['D']}.
-Podaj tylko literę A, B, C lub D oznaczającą odpowiedź, którą uważasz za poprawną.
+
+        prompt = f"""
+Pytanie: {row['Pytanie']}
+
+A: {row['A']}
+B: {row['B']}
+C: {row['C']}
+D: {row['D']}
+
+Podaj tylko jedną literę (A, B, C lub D), która jest poprawną odpowiedzią.
+
+Odpowiedź:
 """
 
-        response = pipe(prompt, max_new_tokens=1)
-        answer = response[0]['generated_text']
-        clean_answer = answer[-1]
+        response = pipe(
+            prompt,
+            max_new_tokens=2,
+            do_sample=False,
+            temperature=0.0,
+            top_p=1.0,
+            return_full_text=False,
+            eos_token_id=tokenizer.eos_token_id
+        )
+
+        raw_answer = response[0]['generated_text'].strip().upper()
+
+        clean_answer = "?"
+        for opt in ["A", "B", "C", "D"]:
+            if raw_answer.startswith(opt):
+                clean_answer = opt
+                break
 
         print(f"Odpowiedź to: {clean_answer}")
 
         responses.append(clean_answer)
-        if clean_answer == row['Pozycja']:
-            correctness.append(1)
-        else:
-            correctness.append(0)
+        correctness.append(int(clean_answer == str(row['Pozycja']).strip().upper()))
 
-    df['Odpowiedz modelu'] = responses
-    df['Poprawnosc'] = correctness
+    df["Odpowiedz modelu"] = responses
+    df["Poprawnosc"] = correctness
     return df
 
 def get_answer_api(df, model, interval=0):
@@ -130,12 +142,13 @@ Podaj tylko literę A, B, C lub D oznaczającą odpowiedź, którą uważasz za 
 """
         
         try:
-            answer = model.generate_answer(prompt)
+            ans = model.generate_answer(prompt)
         except ResourceExhausted as e:
             print("Limit API osiągnięty, czekam 30 sekund...")
             time.sleep(interval)
-            answer = model.generate_answer(prompt)
+            ans = model.generate_answer(prompt)
 
+        answer = ans.upper()
         responses.append(answer)
 
         print(f"Odpowiedź to: {answer}")
@@ -173,7 +186,7 @@ def save(df, llm_id):
 
 
 def main():
-    #load_dotenv()
+    load_dotenv()
 
     config_defaults = load_config()
     args = parse_arguments(config_defaults)
@@ -191,12 +204,10 @@ def main():
         df_with_answers = get_answer_local(df, model, tokenizer)
 
     elif args.api == 'gemini':
-        # Model Gemini przez API
         model = GeminiModel(model_id, args.key)
         df_with_answers = get_answer_api(df, model, args.interval)
 
     elif args.api == 'openAI':
-        # Model OpenAI lub kompatybilny endpoint
         model = OpenAIModel(model_id, args.key, args.url)
         df_with_answers = get_answer_api(df, model, args.interval)
 
